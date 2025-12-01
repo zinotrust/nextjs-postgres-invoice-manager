@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-// import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
@@ -54,9 +54,9 @@ export default async function CreatePost() {
                         </CardDescription>
                       )}
                     </div>
-                    <span variant={post.published ? "default" : "secondary"}>
+                    <Badge variant={post.published ? "default" : "secondary"}>
                       {post.published ? "Published" : "Draft"}
-                    </span>
+                    </Badge>
                   </div>
                 </CardHeader>
               </Card>
