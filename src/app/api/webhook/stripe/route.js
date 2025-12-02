@@ -2,101 +2,97 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import Stripe from "stripe";
+import prisma from "@/lib/prisma";
 import { sendEmail, updateMailAPIEmail } from "@/actions/emailActions";
-
-// https://dashboard.stripe.com/test/settings/billing/portal
-
-// stripe login
-// stripe listen --forward-to localhost:3000/api/webhook/stripe
-// stripe listen --forward-to https://invoicemgr.vercel.app/api/webhook/stripe
 
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 const webhookSecret = process.env.STRIPE_WEBHOOK;
 
 export async function POST(req) {
-  console.log("Stripe webhook received");
-
   const body = await req.text();
-
   const signature = headers().get("stripe-signature");
 
-  let data;
-  let eventType;
   let event;
 
-  // verify Stripe event is legit
+  // Verify webhook
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
-    console.error(`Webhook signature verification failed. ${err.message}`);
+    console.error("❌ Webhook signature verification failed:", err.message);
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
 
-  data = event.data;
-  eventType = event.type;
+  const eventType = event.type;
 
   try {
     switch (eventType) {
       case "checkout.session.completed": {
-        // First payment is successful and a subscription is created
-        // ✅ Grant access to the product
-        let user;
-        const session = await stripe.checkout.sessions.retrieve(
-          data.object.id,
-          {
-            expand: ["line_items"],
-          }
-        );
-        // console.log("---- session ----", session);
+        const session = event.data.object;
 
-        // console.log("session", session?.line_items?.data);
-        const priceId = session?.line_items?.data[0]?.price.id;
+        const customerEmail = session.customer_details.email;
+        const amount = session.amount_total / 100;
 
-        // update mailapi record
-        const customerEmail = session?.customer_details.email;
-        const amount = session?.amount_total / 100;
+        console.log("✅ Payment completed:", customerEmail, amount);
 
-        const invoice = await prisma.invoice.updateMany({
+        // 1. Find latest PENDING matching invoice
+        const invoice = await prisma.invoice.findFirst({
           where: {
             customerEmail,
             amount,
+            status: "PENDING",
           },
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (!invoice) {
+          console.warn("⚠️ No matching invoice found");
+          break;
+        }
+
+        // 2. Update invoice to PAID
+        const updated = await prisma.invoice.update({
+          where: { id: invoice.id },
           data: {
             status: "PAID",
             paidAt: new Date(),
           },
         });
 
-        // send Email
+        console.log("✅ Invoice updated:", updated.id);
+
+        // 3. Send receipt email
         await sendEmail({
           from: "InvoiceMgr <noreply@mail.mailapi.dev>",
           to: customerEmail,
-          subject: `InvoiceMgr Update - ${purpose}`,
+          subject: `Payment Confirmed – ${invoice.purpose}`,
           template_id: "invoice_receipt",
           template_data: {
-            purpose: invoicepurpose,
+            purpose: invoice.purpose,
             amount: invoice.amount,
             paidAt: new Date().toISOString(),
           },
         });
 
         await updateMailAPIEmail({
-          email: userEmail,
-          customFields: {
-            status: "PAID",
-            paidAt: new Date().toISOString(),
-          },
+          email: customerEmail,
+          customFields: { status: "PAID", paidAt: new Date().toISOString() },
         });
 
         break;
       }
 
       default:
-      // Unhandled event type
+        console.log("⚠️ Unhandled Stripe event:", eventType);
     }
-  } catch (e) {
-    console.error("stripe error: " + e.message + " | EVENT TYPE: " + eventType);
+  } catch (err) {
+    console.error(
+      "❌ Error processing Stripe webhook:",
+      err.message,
+      "Event:",
+      eventType
+    );
+    return NextResponse.json({ error: "Webhook error" }, { status: 500 });
   }
 
-  return NextResponse.json({});
+  return NextResponse.json({ received: true });
 }

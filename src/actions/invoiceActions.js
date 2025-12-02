@@ -20,7 +20,7 @@ export async function createInvoice(formData) {
     // if (!verify?.data?.valid) {
     //   return { success: false, error: verify.data.message };
     // }
-    const stripeLink = invoiceLink + "/prefilled_email=" + customerEmail;
+    const stripeLink = invoiceLink + "?prefilled_email=" + customerEmail;
 
     const invoice = await prisma.invoice.create({
       data: {
@@ -98,7 +98,7 @@ export async function getInvoice(id) {
 export async function updateInvoice(id, formData) {
   const { customerEmail, invoiceLink } = formData;
   
-  const stripeLink = invoiceLink + "/prefilled_email=" + customerEmail;
+  const stripeLink = invoiceLink + "?prefilled_email=" + customerEmail;
 
   try {
     const invoice = await prisma.invoice.update({
