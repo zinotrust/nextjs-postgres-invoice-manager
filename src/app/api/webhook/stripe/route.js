@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import Stripe from "stripe";
-import { updateMailAPIEmail } from "@/actions/emailActions";
+import { sendEmail, updateMailAPIEmail } from "@/actions/emailActions";
 
 // https://dashboard.stripe.com/test/settings/billing/portal
 
@@ -15,8 +15,6 @@ const webhookSecret = process.env.STRIPE_WEBHOOK;
 
 export async function POST(req) {
   console.log("Stripe webhook received");
-
-  
 
   const body = await req.text();
 
@@ -66,6 +64,19 @@ export async function POST(req) {
           data: {
             status: "PAID",
             paidAt: new Date(),
+          },
+        });
+
+        // send Email
+        await sendEmail({
+          from: "InvoiceMgr <noreply@mail.mailapi.dev>",
+          to: customerEmail,
+          subject: `InvoiceMgr Update - ${purpose}`,
+          template_id: "invoice_receipt",
+          template_data: {
+            purpose: invoicepurpose,
+            amount: invoice.amount,
+            paidAt: new Date().toISOString(),
           },
         });
 
