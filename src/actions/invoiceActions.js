@@ -2,7 +2,12 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { addEmailToMailAPI, sendEmail, updateMailAPIEmail, verifyEmail } from "./emailActions";
+import {
+  addEmailToMailAPI,
+  sendEmail,
+  updateMailAPIEmail,
+  verifyEmail,
+} from "./emailActions";
 
 export async function createInvoice(formData) {
   const { purpose, amount, customerEmail, invoiceLink, status, dueDate } =
@@ -15,13 +20,14 @@ export async function createInvoice(formData) {
     // if (!verify?.data?.valid) {
     //   return { success: false, error: verify.data.message };
     // }
+    const stripeLink = invoiceLink + "/prefilled_email=" + customerEmail;
 
     const invoice = await prisma.invoice.create({
       data: {
         purpose: purpose,
         amount: parseFloat(amount),
         customerEmail: customerEmail,
-        invoiceLink: invoiceLink || null,
+        invoiceLink: stripeLink || null,
         status: status || "PENDING",
         dueDate: new Date(dueDate),
       },
@@ -90,6 +96,10 @@ export async function getInvoice(id) {
 }
 
 export async function updateInvoice(id, formData) {
+  const { customerEmail, invoiceLink } = formData;
+  
+  const stripeLink = invoiceLink + "/prefilled_email=" + customerEmail;
+
   try {
     const invoice = await prisma.invoice.update({
       where: { id },
@@ -97,7 +107,7 @@ export async function updateInvoice(id, formData) {
         purpose: formData.purpose,
         amount: parseFloat(formData.amount),
         customerEmail: formData.customerEmail,
-        invoiceLink: formData.invoiceLink || null,
+        invoiceLink: stripeLink || null,
         status: formData.status,
         dueDate: new Date(formData.dueDate),
       },
@@ -138,7 +148,7 @@ export async function markAsPaid(id) {
       customFields: {
         status: "PAID",
       },
-    })
+    });
 
     revalidatePath("/invoices");
     revalidatePath(`/invoices/${id}`);
@@ -164,7 +174,7 @@ export async function markAsPending(id) {
       customFields: {
         status: "PENDING",
       },
-    })
+    });
     revalidatePath("/invoices");
     revalidatePath(`/invoices/${id}`);
     return { success: true, data: invoice };

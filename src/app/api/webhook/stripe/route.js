@@ -8,6 +8,7 @@ import { updateMailAPIEmail } from "@/actions/emailActions";
 
 // stripe login
 // stripe listen --forward-to localhost:3000/api/webhook/stripe
+// stripe listen --forward-to https://invoicemgr.vercel.app/api/webhook/stripe
 
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 const webhookSecret = process.env.STRIPE_WEBHOOK;
