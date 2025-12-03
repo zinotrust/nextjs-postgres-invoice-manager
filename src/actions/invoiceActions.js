@@ -13,13 +13,13 @@ export async function createInvoice(formData) {
   const { purpose, amount, customerEmail, invoiceLink, status, dueDate } =
     formData;
   try {
-    // const verify = await verifyEmail(formData.customerEmail);
-    // if (verify.error) {
-    //   return { success: false, error: verify.error };
-    // }
-    // if (!verify?.data?.valid) {
-    //   return { success: false, error: verify.data.message };
-    // }
+    const verify = await verifyEmail(formData.customerEmail);
+    if (verify.error) {
+      return { success: false, error: verify.error };
+    }
+    if (!verify?.data?.valid) {
+      return { success: false, error: verify.data.message };
+    }
     const stripeLink = invoiceLink + "?prefilled_email=" + customerEmail;
 
     const invoice = await prisma.invoice.create({
@@ -42,7 +42,7 @@ export async function createInvoice(formData) {
       template_data: {
         purpose: purpose,
         amount: amount,
-        invoiceLink: invoiceLink,
+        invoiceLink: stripeLink,
         dueDate: dueDate,
         status: status,
       },
