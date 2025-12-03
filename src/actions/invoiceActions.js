@@ -1,6 +1,6 @@
 "use server";
-export const dynamic = "force-dynamic";
 
+import { unstable_noStore as noStore } from "next/cache";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import {
@@ -70,6 +70,7 @@ export async function createInvoice(formData) {
 }
 
 export async function getInvoices(status = null) {
+  noStore();
   try {
     const where = status ? { status } : {};
     const invoices = await prisma.invoice.findMany({
