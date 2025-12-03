@@ -96,9 +96,6 @@ export async function getInvoice(id) {
 }
 
 export async function updateInvoice(id, formData) {
-  const { customerEmail, invoiceLink } = formData;
-  
-  const stripeLink = invoiceLink + "?prefilled_email=" + customerEmail;
 
   try {
     const invoice = await prisma.invoice.update({
@@ -107,7 +104,7 @@ export async function updateInvoice(id, formData) {
         purpose: formData.purpose,
         amount: parseFloat(formData.amount),
         customerEmail: formData.customerEmail,
-        invoiceLink: stripeLink || null,
+        invoiceLink: formData.invoiceLink || null,
         status: formData.status,
         dueDate: new Date(formData.dueDate),
       },

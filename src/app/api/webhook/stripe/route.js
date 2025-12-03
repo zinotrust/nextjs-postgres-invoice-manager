@@ -1,6 +1,6 @@
 // app/api/webhook/stripe/route.js
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
+// import { headers } from "next/headers";
 import Stripe from "stripe";
 import prisma from "@/lib/prisma";
 import { sendEmail, updateMailAPIEmail } from "@/actions/emailActions";
@@ -10,7 +10,8 @@ const webhookSecret = process.env.STRIPE_WEBHOOK;
 
 export async function POST(req) {
   const body = await req.text();
-  const signature = headers().get("stripe-signature");
+  const signature = req.headers.get("stripe-signature");
+//   const signature = headers().get("stripe-signature");
 
   let event;
 
